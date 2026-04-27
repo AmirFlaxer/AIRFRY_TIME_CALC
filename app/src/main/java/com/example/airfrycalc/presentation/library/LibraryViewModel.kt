@@ -6,6 +6,7 @@ import com.example.airfrycalc.domain.model.Ingredient
 import com.example.airfrycalc.domain.usecase.AddIngredientUseCase
 import com.example.airfrycalc.domain.usecase.DeleteIngredientUseCase
 import com.example.airfrycalc.domain.usecase.GetIngredientsUseCase
+import com.example.airfrycalc.domain.usecase.UpdateIngredientUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,12 +19,14 @@ import javax.inject.Inject
 class LibraryViewModel @Inject constructor(
     private val getIngredients: GetIngredientsUseCase,
     private val addIngredient: AddIngredientUseCase,
+    private val updateIngredient: UpdateIngredientUseCase,
     private val deleteIngredient: DeleteIngredientUseCase
 ) : ViewModel() {
 
     data class UiState(
         val ingredients: List<Ingredient> = emptyList(),
-        val showAddDialog: Boolean = false
+        val dialogTarget: Ingredient? = null,  // null = הוספה, non-null = עריכה
+        val showDialog: Boolean = false
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -37,18 +40,27 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun showDialog() {
-        _uiState.update { it.copy(showAddDialog = true) }
+    fun showAddDialog() {
+        _uiState.update { it.copy(showDialog = true, dialogTarget = null) }
+    }
+
+    fun showEditDialog(ingredient: Ingredient) {
+        _uiState.update { it.copy(showDialog = true, dialogTarget = ingredient) }
     }
 
     fun hideDialog() {
-        _uiState.update { it.copy(showAddDialog = false) }
+        _uiState.update { it.copy(showDialog = false, dialogTarget = null) }
     }
 
     fun save(name: String, minutes: Int) {
         if (name.isBlank() || minutes < 1) return
+        val target = _uiState.value.dialogTarget
         viewModelScope.launch {
-            addIngredient(Ingredient(name = name.trim(), cookTimeMinutes = minutes))
+            if (target == null) {
+                addIngredient(Ingredient(name = name.trim(), cookTimeMinutes = minutes))
+            } else {
+                updateIngredient(target.copy(name = name.trim(), cookTimeMinutes = minutes))
+            }
             hideDialog()
         }
     }

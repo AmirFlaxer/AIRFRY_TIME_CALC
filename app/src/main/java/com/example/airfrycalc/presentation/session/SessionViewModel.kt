@@ -27,7 +27,8 @@ class SessionViewModel @Inject constructor(
         val isRunning: Boolean = false,
         val isFinished: Boolean = false,
         val secondsUntilNextStep: Int = 0,
-        val stepAlertVisible: Boolean = false
+        val stepAlertVisible: Boolean = false,
+        val waitingForUser: Boolean = false
     )
 
     private val _uiState = MutableStateFlow(UiState())
@@ -43,8 +44,13 @@ class SessionViewModel @Inject constructor(
         }
     }
 
+    fun confirmStep() {
+        _uiState.update { it.copy(waitingForUser = false, stepAlertVisible = false) }
+        startTimer()
+    }
+
     fun startTimer() {
-        if (_uiState.value.isRunning || _uiState.value.isFinished) return
+        if (_uiState.value.isRunning || _uiState.value.isFinished || _uiState.value.waitingForUser) return
         _uiState.update { it.copy(isRunning = true) }
         timerJob = viewModelScope.launch {
             while (_uiState.value.isRunning && !_uiState.value.isFinished) {
@@ -67,7 +73,8 @@ class SessionViewModel @Inject constructor(
                 currentStepIndex = 0,
                 isRunning = false,
                 isFinished = false,
-                stepAlertVisible = false
+                stepAlertVisible = false,
+                waitingForUser = false
             )
         }
         computeCountdown()
@@ -101,11 +108,8 @@ class SessionViewModel @Inject constructor(
 
         if (crossedStep && nextStep != null) {
             notificationHelper.sendAddIngredientAlert(nextStep.ingredient.name)
-            viewModelScope.launch {
-                _uiState.update { it.copy(stepAlertVisible = true) }
-                delay(4_000L)
-                _uiState.update { it.copy(stepAlertVisible = false) }
-            }
+            timerJob?.cancel()
+            _uiState.update { it.copy(isRunning = false, stepAlertVisible = true, waitingForUser = true) }
         }
         if (isFinished) {
             notificationHelper.sendDoneAlert()

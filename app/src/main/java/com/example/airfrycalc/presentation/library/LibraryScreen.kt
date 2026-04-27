@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.airfrycalc.domain.model.Ingredient
 
@@ -30,13 +32,23 @@ fun LibraryScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("ספריית מרכיבים") },
+                title = { Text("ניהול מרכיבים") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "חזור"
-                        )
+                    Button(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("חזור", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -46,11 +58,12 @@ fun LibraryScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = { viewModel.showDialog() },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                text = { Text("הוסף מרכיב") },
+                onClick = { viewModel.showAddDialog() },
+                icon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(28.dp)) },
+                text = { Text("הוסף מרכיב", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
                 containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.height(64.dp)
             )
         }
     ) { padding ->
@@ -76,6 +89,7 @@ fun LibraryScreen(
                 items(uiState.ingredients, key = { it.id }) { ingredient ->
                     LibraryItemCard(
                         ingredient = ingredient,
+                        onEdit = { viewModel.showEditDialog(ingredient) },
                         onDelete = { viewModel.delete(ingredient) }
                     )
                 }
@@ -83,8 +97,9 @@ fun LibraryScreen(
             }
         }
 
-        if (uiState.showAddDialog) {
-            AddIngredientDialog(
+        if (uiState.showDialog) {
+            IngredientDialog(
+                editTarget = uiState.dialogTarget,
                 onDismiss = { viewModel.hideDialog() },
                 onSave = { name, minutes -> viewModel.save(name, minutes) }
             )
@@ -95,26 +110,27 @@ fun LibraryScreen(
 @Composable
 private fun LibraryItemCard(
     ingredient: Ingredient,
+    onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 68.dp),
+            .heightIn(min = 80.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = ingredient.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = "${ingredient.cookTimeMinutes} דקות בישול",
@@ -122,61 +138,102 @@ private fun LibraryItemCard(
                     color = MaterialTheme.colorScheme.secondary
                 )
             }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "מחק",
-                    tint = MaterialTheme.colorScheme.error
-                )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onEdit,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    modifier = Modifier.height(48.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = "ערוך", modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("ערוך", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+
+                Button(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+                    modifier = Modifier.height(48.dp),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "מחק", modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("מחק", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
 }
 
 @Composable
-private fun AddIngredientDialog(
+private fun IngredientDialog(
+    editTarget: Ingredient?,
     onDismiss: () -> Unit,
     onSave: (String, Int) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var minutesText by remember { mutableStateOf("") }
+    val isEdit = editTarget != null
+    var name by remember(editTarget) { mutableStateOf(editTarget?.name ?: "") }
+    var minutesText by remember(editTarget) { mutableStateOf(editTarget?.cookTimeMinutes?.toString() ?: "") }
     val minutes = minutesText.toIntOrNull() ?: 0
     val isValid = name.isNotBlank() && minutes >= 1
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("הוסף מרכיב חדש") },
+        title = {
+            Text(
+                text = if (isEdit) "עריכת מרכיב" else "הוסף מרכיב חדש",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("שם המרכיב") },
                     singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
                 )
                 OutlinedTextField(
                     value = minutesText,
                     onValueChange = { minutesText = it.filter { c -> c.isDigit() } },
-                    label = { Text("זמן בישול (דקות)") },
+                    label = { Text("זמן בישול") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    suffix = { Text("דק'") }
+                    suffix = { Text("דקות", fontSize = 16.sp) },
+                    textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
                 )
             }
         },
         confirmButton = {
             Button(
                 onClick = { onSave(name, minutes) },
-                enabled = isValid
+                enabled = isValid,
+                modifier = Modifier.height(52.dp)
             ) {
-                Text("שמור")
+                Text(
+                    text = if (isEdit) "שמור שינויים" else "הוסף",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("ביטול")
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.height(52.dp)
+            ) {
+                Text("ביטול", fontSize = 17.sp)
             }
         }
     )

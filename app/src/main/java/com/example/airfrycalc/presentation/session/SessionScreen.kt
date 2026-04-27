@@ -86,7 +86,7 @@ fun SessionScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (uiState.isFinished) {
-                FinishedCard()
+                FinishedCard(onBack = onBack)
             } else {
                 // Main countdown timer
                 Text(
@@ -181,34 +181,75 @@ fun SessionScreen(
 
             // Control buttons
             if (!uiState.isFinished) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Button(
-                        onClick = {
-                            if (uiState.isRunning) viewModel.pauseTimer()
-                            else viewModel.startTimer()
-                        },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(12.dp)
+                if (uiState.waitingForUser) {
+                    val stepName = session.steps[uiState.currentStepIndex].ingredient.name
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = AirFryYellow)
                     ) {
-                        Text(
-                            text = when {
-                                uiState.isRunning -> "השהה"
-                                uiState.elapsedSeconds == 0 -> "התחל"
-                                else -> "המשך"
-                            },
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = "הוסף עכשיו לאייר פריי:",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            Text(
+                                text = stepName,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            Button(
+                                onClick = { viewModel.confirmStep() },
+                                modifier = Modifier.fillMaxWidth().height(64.dp),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF1A1A1A),
+                                    contentColor = AirFryYellow
+                                )
+                            ) {
+                                Text("הוספתי — המשך", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
-                    OutlinedButton(
-                        onClick = { viewModel.resetTimer() },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(12.dp)
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("אפס", fontSize = 18.sp)
+                        Button(
+                            onClick = {
+                                if (uiState.isRunning) viewModel.pauseTimer()
+                                else viewModel.startTimer()
+                            },
+                            modifier = Modifier.weight(1f).height(56.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = when {
+                                    uiState.isRunning -> "השהה"
+                                    uiState.elapsedSeconds == 0 -> "התחל"
+                                    else -> "המשך"
+                                },
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = { viewModel.resetTimer() },
+                            modifier = Modifier.weight(1f).height(56.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("אפס", fontSize = 18.sp)
+                        }
                     }
                 }
             }
@@ -270,29 +311,53 @@ private fun StepRow(
 }
 
 @Composable
-private fun FinishedCard() {
-    Card(
+private fun FinishedCard(onBack: () -> Unit) {
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1B4332))
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Column(
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1B4332))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "האוכל מוכן! 🎉",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StepComplete
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "תהנה מהארוחה!",
+                    fontSize = 22.sp,
+                    color = StepComplete.copy(alpha = 0.8f)
+                )
+            }
+        }
+
+        Button(
+            onClick = onBack,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .height(72.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = StepComplete,
+                contentColor = Color.Black
+            )
         ) {
             Text(
-                text = "האוכל מוכן!",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                color = StepComplete
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "תהנה מהארוחה!",
+                text = "חזור לתפריט הראשי",
                 fontSize = 22.sp,
-                color = StepComplete.copy(alpha = 0.8f)
+                fontWeight = FontWeight.Bold
             )
         }
     }
