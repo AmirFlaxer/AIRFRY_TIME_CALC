@@ -52,4 +52,5 @@ class HomeViewModel @Inject constructor(
         sessionHolder.session = calculateSession(selected)
         return true
     }
+
 }

@@ -47,9 +47,12 @@ fun SessionScreen(
 
     val totalSeconds = session.totalDurationMinutes * 60
     val remainingSeconds = maxOf(0, totalSeconds - uiState.elapsedSeconds)
-    val remMin = remainingSeconds / 60
-    val remSec = remainingSeconds % 60
-    val timeString = "%02d:%02d".format(remMin, remSec)
+    val currentStep = session.steps[uiState.currentStepIndex]
+    val nextStep = session.steps.getOrNull(uiState.currentStepIndex + 1)
+    val stepDurationMinutes = (nextStep?.addAtMinute ?: session.totalDurationMinutes) - currentStep.addAtMinute
+    val countdownSeconds = if (nextStep != null) uiState.secondsUntilNextStep else remainingSeconds
+    val cMin = countdownSeconds / 60
+    val cSec = countdownSeconds % 60
 
     val alertBg by animateColorAsState(
         targetValue = if (uiState.stepAlertVisible) AirFryYellow.copy(alpha = 0.25f)
@@ -88,18 +91,11 @@ fun SessionScreen(
             if (uiState.isFinished) {
                 FinishedCard(onBack = onBack)
             } else {
-                // Main countdown timer
-                Text(
-                    text = timeString,
-                    style = MaterialTheme.typography.displayLarge,
-                    color = if (remainingSeconds <= 60) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.onBackground
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Current step card
-                val currentStep = session.steps[uiState.currentStepIndex]
+                // Instruction card
+                val contentColor = if (uiState.stepAlertVisible) Color.Black
+                    else MaterialTheme.colorScheme.onPrimaryContainer
+                val actionLabel = if (uiState.elapsedSeconds == 0) "הכנס עכשיו לאייר פריי:"
+                    else "מתבשל:"
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -109,40 +105,60 @@ fun SessionScreen(
                     ),
                     border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(20.dp)) {
                         Text(
-                            text = if (uiState.elapsedSeconds == 0) "הכנס עכשיו לאייר פריי:" else "הוסף עכשיו:",
+                            text = actionLabel,
                             style = MaterialTheme.typography.labelLarge,
-                            color = if (uiState.stepAlertVisible) Color.Black
-                            else MaterialTheme.colorScheme.onPrimaryContainer
+                            color = contentColor
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = currentStep.ingredient.name,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = contentColor
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = currentStep.ingredient.name,
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (uiState.stepAlertVisible) Color.Black
-                            else MaterialTheme.colorScheme.onPrimaryContainer
+                            text = "ל-$stepDurationMinutes דקות",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = contentColor.copy(alpha = 0.75f)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Next step countdown
-                val nextStep = session.steps.getOrNull(uiState.currentStepIndex + 1)
-                if (nextStep != null && uiState.secondsUntilNextStep > 0) {
-                    val nm = uiState.secondsUntilNextStep / 60
-                    val ns = uiState.secondsUntilNextStep % 60
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer
+                // Countdown to next event
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "הבא: ${nextStep.ingredient.name} בעוד %02d:%02d".format(nm, ns),
+                            text = "%02d:%02d".format(cMin, cSec),
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (countdownSeconds <= 30) MaterialTheme.colorScheme.error
+                            else MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = if (nextStep != null) "עד להוספת ${nextStep.ingredient.name}"
+                            else "עד לסיום",
                             style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                             color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        val eMin = uiState.elapsedSeconds / 60
+                        val eSec = uiState.elapsedSeconds % 60
+                        Text(
+                            text = "זמן כולל: %02d:%02d".format(eMin, eSec),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.45f)
                         )
                     }
                 }
@@ -182,7 +198,6 @@ fun SessionScreen(
             // Control buttons
             if (!uiState.isFinished) {
                 if (uiState.waitingForUser) {
-                    val stepName = session.steps[uiState.currentStepIndex].ingredient.name
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
@@ -191,9 +206,9 @@ fun SessionScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(20.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 text = "הוסף עכשיו לאייר פריי:",
@@ -202,11 +217,18 @@ fun SessionScreen(
                                 color = Color.Black
                             )
                             Text(
-                                text = stepName,
-                                fontSize = 28.sp,
+                                text = currentStep.ingredient.name,
+                                fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
                             )
+                            Text(
+                                text = "ל-$stepDurationMinutes דקות",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.Black.copy(alpha = 0.75f)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Button(
                                 onClick = { viewModel.confirmStep() },
                                 modifier = Modifier.fillMaxWidth().height(64.dp),

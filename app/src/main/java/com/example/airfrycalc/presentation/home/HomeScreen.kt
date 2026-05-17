@@ -1,8 +1,9 @@
 package com.example.airfrycalc.presentation.home
 
+import android.content.Intent
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,11 +13,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.airfrycalc.domain.model.Ingredient
+import com.example.airfrycalc.presentation.theme.AirFryOrange
+import com.example.airfrycalc.presentation.theme.AirFryYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -26,16 +33,46 @@ fun HomeScreen(
     onOpenLibrary: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "AirFry Calc",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .shadow(elevation = 4.dp, shape = RoundedCornerShape(11.dp))
+                                .clip(RoundedCornerShape(11.dp))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(AirFryOrange, AirFryYellow)
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "🔥", fontSize = 22.sp)
+                        }
+                        Column(verticalArrangement = Arrangement.Center) {
+                            Text(
+                                text = "מחשבון איירפריי",
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "AF Apps",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = AirFryOrange,
+                                letterSpacing = 1.5.sp
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -131,7 +168,26 @@ fun HomeScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+
+            TextButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "AirFry Calc - מחשבון זמני בישול לאייר פריי 🔥\nhttps://github.com/AmirFlaxer/AIRFRY_TIME_CALC")
+                    }
+                    context.startActivity(Intent.createChooser(intent, null))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "שתף את האפליקציה",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 }

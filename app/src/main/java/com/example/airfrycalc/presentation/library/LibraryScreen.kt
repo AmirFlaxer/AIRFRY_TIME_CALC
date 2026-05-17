@@ -114,23 +114,22 @@ private fun LibraryItemCard(
     onDelete: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 80.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
+            Column {
                 Text(
                     text = ingredient.name,
                     style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = "${ingredient.cookTimeMinutes} דקות בישול",
@@ -139,14 +138,17 @@ private fun LibraryItemCard(
                 )
             }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Button(
                     onClick = onEdit,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer,
                         contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                     ),
-                    modifier = Modifier.height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Default.Edit, contentDescription = "ערוך", modifier = Modifier.size(20.dp))
@@ -160,7 +162,7 @@ private fun LibraryItemCard(
                         containerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
                         contentColor = MaterialTheme.colorScheme.error
                     ),
-                    modifier = Modifier.height(48.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = "מחק", modifier = Modifier.size(20.dp))
